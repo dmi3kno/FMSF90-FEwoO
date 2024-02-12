@@ -1,0 +1,86 @@
+[
+  {
+    "objectID": "index.html#contents",
+    "href": "index.html#contents",
+    "title": "Feature Engineering without overfitting",
+    "section": "Contents",
+    "text": "Contents\n\nObjective of feature engineering\nOverfitting: a quick recap\n\nModel complexity\nSize of the data\nLabel leakage\n\nModel classes and learnable features\nEnough is enough: stopping criteria\nWhere to learn more?"
+  },
+  {
+    "objectID": "index.html#objective-of-feature-engineering",
+    "href": "index.html#objective-of-feature-engineering",
+    "title": "Feature Engineering without overfitting",
+    "section": "Objective of feature engineering",
+    "text": "Objective of feature engineering\nTrade-off between accuracy and interpretability\n\nParsimonious models are preferred, but probably not by sacrificing accuracy.\n\nImprove quality without increasing quantity.\n\nHigh-grading your features (long-lat &gt;&gt; ZIP code)\n“Unlearned” feature is a useless feature\n\n\n\n\n\n\n\nFeature engineering\n\n\n\nCreating new representations of the data to enhance model effectiveness\nReduce the number of predictors as far as possible without compromising predictive performance."
+  },
+  {
+    "objectID": "index.html#overfitting",
+    "href": "index.html#overfitting",
+    "title": "Feature Engineering without overfitting",
+    "section": "Overfitting",
+    "text": "Overfitting\n\nOverfit to observations: model picks up patterns in the training data, which do not generalize to the new data\nOverfit to predictors: a variable relevant in training set appears to be not relevant in the new data.\n\n\n\n\n\n\n\nNo free lunch!\n\n\nWithout any specific knowledge of the problem or data at hand, no one predictive model can be said to be the best (Wolpert 1996).\n\n\n\nWith the right set of predictors, many different types of models can achieve the same level of performance"
+  },
+  {
+    "objectID": "index.html#overfitting-1",
+    "href": "index.html#overfitting-1",
+    "title": "Feature Engineering without overfitting",
+    "section": "Overfitting",
+    "text": "Overfitting\nComplex model can “memorize” the data\n\n\n\nToo flexible model (too many parameters)\nToo deep tree\nToo many variables\nIf training data &lt;&lt; test data\n\n\n\n\n\n\n\n\n\n\n\n\n\nReusing the data\n\nMultiple purposes:\n\nTuning, model selection, variable selection\n\nIterated workflow rabbit hole"
+  },
+  {
+    "objectID": "index.html#label-leakage",
+    "href": "index.html#label-leakage",
+    "title": "Feature Engineering without overfitting",
+    "section": "Label leakage",
+    "text": "Label leakage\nCould this predictor help?\n\nneigh_means &lt;- ames_train |&gt; \n  group_by(Neighborhood) |&gt; \n  summarize(mean_price=mean(Sale_Price))\n\names_train |&gt; left_join(neigh_means)\names_test |&gt; left_join(neigh_means) \n\n\nOK, OK! How about this one?\n\nneigh_areas &lt;- ames |&gt; \n  group_by(Neighborhood) |&gt; \n  summarize(mean_area=mean(Gr_Liv_Area))\n\names_train |&gt; left_join(neigh_areas)\names_test |&gt; left_join(neigh_areas)"
+  },
+  {
+    "objectID": "index.html#modeling-process",
+    "href": "index.html#modeling-process",
+    "title": "Feature Engineering without overfitting",
+    "section": "Modeling process",
+    "text": "Modeling process\n\n\n\n\n\nData investigation\nSimple summary measures, correlations\nFirst draft draft of predictors is selected\nModeling starts\nPerformance measures are analyzed and compared\n\n\n\n\n\nAnalysis of residuals\nAdditional feature engineering to compensate for gaps\nTwo candidate models are selected\nPrediction on hold-out set\nFinal prediction on unseen (test) data\n\n\n\nSource: Kuhn and Johnson (2020)"
+  },
+  {
+    "objectID": "index.html#models-and-learnable-features",
+    "href": "index.html#models-and-learnable-features",
+    "title": "Feature Engineering without overfitting",
+    "section": "Models and learnable features",
+    "text": "Models and learnable features\n\n\nHarmful predictors\n\nHighly correlated/collinear\n\nLinear and logistic regression\n\nIrrelevant predictors\n\nNeural networks, SVM\n\nDummy variables = slower fitting\n\nTree-based models\n\nOrdinal factors (need transformation)\n\nAll models\n\n\n\nUseful predictors\n\nRatios\n\nAlmost all models\n\nStandardized predictors\n\nLinear models, Neural nets\n\nColumn sums and counts\n\nTree-based models\n\n2-way interactions\n\nLinear models\n\n\n\n\nSome require specialized algorithms and CV:\n\nTime dependence\nSpace dependence"
+  },
+  {
+    "objectID": "index.html#stopping-criteria",
+    "href": "index.html#stopping-criteria",
+    "title": "Feature Engineering without overfitting",
+    "section": "Stopping criteria",
+    "text": "Stopping criteria\n\nEarly stopping is essential in many modern algorithms:\n\nearly_stopping_rounds in xgboost\n\nIf set to an integer k, training with a validation set will stop if the performance doesn’t improve for k rounds.\n\nEarly stopping in H2O AutoML\n\nApplies to neural nets, random forests, GBM, xgboost, as well as GLM/GAM\n\n\nWhen validation is done manually, it means you should stop tuning\n\nHard to detect with multiple validation attempts\n“Overfitted to the seed”\n\n\n\n\n\n\n\nSource: https://mljar.com/blog/xgboost-early-stopping/"
+  },
+  {
+    "objectID": "index.html#perils-of-multiple-prediction",
+    "href": "index.html#perils-of-multiple-prediction",
+    "title": "Feature Engineering without overfitting",
+    "section": "Perils of multiple prediction",
+    "text": "Perils of multiple prediction\n\nKaggle hosted Mercedes-Benz Greener Manufacturing competition in June-July 2017. Predict the time it takes to test the car using an anonymized set of 377 variables.\nMB: “Private leaderboard is calculated with approximately 81% of the test data”\nTotal of 3927 teams. The average rank change was 574 places up or down.\nBiggest improvements: 3808 places (3923 to 115) and 2838 places (2843 to 5)!\nBiggest fall: 3564 places\n\n\n\n\n\n\n\n\n\n\n\n\n\n\\[\nS =\\frac{\\frac{1}{n}\\sum\\lvert\\text{rank_change}\\rvert}{\\text{n_teams}}=0.1462\n\\]"
+  },
+  {
+    "objectID": "index.html#leaderboard-progression",
+    "href": "index.html#leaderboard-progression",
+    "title": "Feature Engineering without overfitting",
+    "section": "Leaderboard progression",
+    "text": "Leaderboard progression"
+  },
+  {
+    "objectID": "index.html#where-to-learn-more",
+    "href": "index.html#where-to-learn-more",
+    "title": "Feature Engineering without overfitting",
+    "section": "Where to learn more?",
+    "text": "Where to learn more?\n\nPractice\nKaggle\nBooks (recommendations in Canvas forums)"
+  },
+  {
+    "objectID": "index.html#references",
+    "href": "index.html#references",
+    "title": "Feature Engineering without overfitting",
+    "section": "References",
+    "text": "References\n\n\n\n\nFMSF86/90 Statistical learning and visualization, Spring 2024\n\n\n\n\nKuhn, Max, and Kjell Johnson. 2020. Feature Engineering and Selection: A Practical Approach for Predictive Models. Chapman & Hall/CRC Data Science Series. Boca Raton London New York: CRC Press, Taylor & Francis Group.\n\n\nWolpert, David H. 1996. “The Lack of a Priori Distinctions Between Learning Algorithms.” Neural Computation 8 (7): 1341–90. https://doi.org/10.1162/neco.1996.8.7.1341."
+  }
+]

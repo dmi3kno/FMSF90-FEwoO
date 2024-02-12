@@ -1,0 +1,303 @@
+---
+title: "Feature Engineering without overfitting"
+subtite: "Trust your CV!"
+format: 
+  revealjs:
+    theme: [serif, dp_theme.scss]
+author:
+  - name: "Dmytro Perepolkin"
+    id: dp
+    orcid: 0000-0001-8558-6183
+    email: dmytro.perepolkin@cec.lu.se
+    affiliation: 
+      - name: Centre for Environmental and Climate Science, Lund University
+        city: Lund, Sweden
+        url: https://www.cec.lu.se
+logo: "img/Lunds_universitet.svg.png"
+footer: "FMSF86/90 Statistical learning and visualization, Spring 2024"
+bibliography: references.bib
+---
+
+## Contents
+
+- Objective of feature engineering
+- Overfitting: a quick recap
+  - Model complexity
+  - Size of the data
+  - Label leakage
+- Model classes and learnable features
+- Enough is enough: stopping criteria
+- Where to learn more?
+
+## Objective of feature engineering
+
+Trade-off between *accuracy* and *interpretability* 
+
+  - Parsimonious models are preferred, but probably not by sacrificing accuracy.
+
+Improve *quality* without increasing *quantity*.
+
+  - High-grading your features (long-lat >> ZIP code)
+  - "Unlearned" feature is a useless feature 
+  
+
+:::{.callout-tip}
+### Feature engineering
+1. Creating new representations of the data to enhance model effectiveness
+2. Reduce the number of predictors as far as possible without compromising predictive performance.
+
+:::
+
+
+## Overfitting
+
+- Overfit to **observations**: model picks up patterns in the training data, which do not generalize to the new data
+
+- Overfit to **predictors**: a variable relevant in training set appears to be not relevant in the new data.
+
+:::{.callout-note}
+### No free lunch!
+Without any specific knowledge of the problem or data at hand, no one predictive model can be said to be the best [@wolpert1996LackPrioriDistinctions]. 
+:::
+
+With the right set of predictors, many different types of models can achieve the same level of performance
+
+## Overfitting
+
+Complex model can "memorize" the data
+
+::::{.columns}
+:::{.column width="70%"}
+
+- Too flexible model (too many parameters)
+- Too deep tree
+- Too many variables
+- If training data << test data
+
+:::
+
+:::{.column width="30%"}
+
+```{r}
+#| echo: false
+knitr::include_graphics("https://upload.wikimedia.org/wikipedia/commons/6/68/Overfitted_Data.png")
+```
+
+:::
+
+::::
+
+Reusing the data
+
+- Multiple purposes: 
+  - Tuning, model selection, variable selection
+- Iterated workflow rabbit hole
+
+## Label leakage
+
+Could this predictor help?
+
+```{r}
+#| echo: false
+#| include: false
+#| eval: false
+library(AmesHousing)
+library(tidyverse)
+library(caret)
+ames <- make_ames()
+idx <- createDataPartition(ames$Sale_Price, 
+         p=0.8, list = FALSE) |> as.vector()
+ames_train <- ames |> slice(idx)
+ames_test <- ames |> slice(-idx) |> select(-Sale_Price)
+```
+
+
+```{r}
+#| echo: true
+#| eval: false
+
+neigh_means <- ames_train |> 
+  group_by(Neighborhood) |> 
+  summarize(mean_price=mean(Sale_Price))
+
+ames_train |> left_join(neigh_means)
+ames_test |> left_join(neigh_means) 
+```
+
+::: {.fragment}
+
+OK, OK! How about this one?
+
+```{r}
+#| echo: true
+#| eval: false 
+neigh_areas <- ames |> 
+  group_by(Neighborhood) |> 
+  summarize(mean_area=mean(Gr_Liv_Area))
+
+ames_train |> left_join(neigh_areas)
+ames_test |> left_join(neigh_areas)
+
+```
+
+:::
+
+## Modeling process
+
+```{r}
+#| echo: false
+#| fig-width: 7
+#| out-width: "30%"
+
+rsvg::rsvg_png("img/intro-process-1.svg","img/intro-process-1.png", width=1200)
+knitr::include_graphics("img/intro-process-1.png")
+```
+
+:::::{.columns}
+
+::::{.column width="50%"}
+
+::: {style="font-size: 40%;"}
+a) Data investigation
+b) Simple summary measures, correlations
+c) First draft draft of predictors is selected
+d) Modeling starts 
+e) Performance measures are analyzed and compared
+:::
+::::
+
+::::{.column width="50%"}
+::: {style="font-size: 40%;"}
+f) Analysis of residuals
+g) Additional feature engineering to compensate for gaps
+h) Two candidate models are selected
+i) Prediction on hold-out set
+j) Final prediction on unseen (test) data
+:::
+::::
+::: {style="font-size: 30%;"}
+Source: @kuhn2020FeatureEngineeringSelection
+:::
+:::::
+## Models and learnable features
+
+::::{.columns}
+
+:::{.column width="50%"}
+### Harmful predictors
+- Highly correlated/collinear
+   - Linear and logistic regression
+- Irrelevant predictors
+   - Neural networks, SVM
+- Dummy variables = slower fitting
+   - Tree-based models
+- Ordinal factors (need transformation)
+   - All models
+
+:::
+
+:::{.column width="50%"}
+### Useful predictors
+- Ratios
+  - Almost all models
+- Standardized predictors
+  - Linear models, Neural nets
+- Column sums and counts
+  - Tree-based models
+- 2-way interactions
+  - Linear models
+
+:::
+
+::::
+
+Some require specialized algorithms and CV:
+
+- Time dependence
+- Space dependence
+
+
+## Stopping criteria
+
+::::{.columns}
+
+Early stopping is essential in many modern algorithms:
+
+:::{.column width="60%"}
+
+- `early_stopping_rounds` in `xgboost`
+  -  If set to an integer `k`, training with a validation set will stop if the performance doesn’t improve for `k` rounds. 
+- Early stopping in [H2O AutoML](https://docs.h2o.ai/h2o/latest-stable/h2o-docs/data-science/early_stopping.html)
+  - Applies to neural nets, random forests, GBM, xgboost, as well as GLM/GAM
+
+
+When validation is done manually, it means you should stop tuning
+
+- Hard to detect with multiple validation attempts
+- "Overfitted to the seed"
+:::
+
+:::{.column width="40%"}
+```{r}
+#| fig-cap: "Source: https://mljar.com/blog/xgboost-early-stopping/"
+knitr::include_graphics("https://mljar.com/blog/xgboost-early-stopping/optimal_number_of_trees.png")
+```
+
+:::
+
+::::
+
+## Perils of multiple prediction
+
+- Kaggle hosted Mercedes-Benz Greener Manufacturing competition in June-July 2017. Predict the time it takes to test the car using an anonymized set of 377 variables. 
+- MB: "Private leaderboard is calculated with approximately 81% of the test data"
+- Total of 3927 teams. The average rank change was 574 places up or down.
+- Biggest improvements: 3808 places (3923 to 115) and 2838 places (2843 to 5)!
+- Biggest fall: 3564 places
+
+::::{.columns}
+
+:::{.column width="50%"}
+
+```{r}
+knitr::include_graphics("https://i.imgur.com/jhvaleI.jpeg") 
+```
+
+:::
+
+:::{.column width="50%"}
+$$
+S =\frac{\frac{1}{n}\sum\lvert\text{rank_change}\rvert}{\text{n_teams}}=0.1462
+$$
+:::
+::::
+
+## Leaderboard progression
+
+```{r}
+knitr::include_graphics("img/my_first_tween.gif")
+```
+
+
+
+## Where to learn more?
+
+- Practice
+- Kaggle
+- Books (recommendations in Canvas forums)
+
+```{r}
+#| layout-ncol: 4
+
+knitr::include_graphics("img/61CgQomLOrL._SL1400_.jpg")
+knitr::include_graphics("img/91zmHDUBLoL._SL1500_.jpg")
+knitr::include_graphics("img/71NFT2RJzGL._SL1360_.jpg")
+knitr::include_graphics("img/913IeOl8MtL._SL1500_.jpg")
+
+
+
+```
+
+
+
+## References
